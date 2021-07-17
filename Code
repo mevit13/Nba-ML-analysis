@@ -1,0 +1,111 @@
+import numpy as np # linear algebra
+import pandas as pd # data processing, CSV file I/O (e.g. pd.read_csv)
+import torch
+import matplotlib.pyplot as plt
+from sklearn.model_selection import train_test_split
+from sklearn import linear_model
+from sklearn.svm import SVR
+from sklearn.metrics import mean_squared_error, r2_score
+from sklearn import preprocessing 
+from scipy.stats import linregress
+from scipy.stats import norm
+from operator import itemgetter
+import os
+for dirname, _, filenames in os.walk('/kaggle/input'):
+    for filename in filenames:
+        print(os.path.join(dirname, filename))
+data0=pd.read_csv("/kaggle/input/nba-college/nbancaacomparisons-QueryResult.csv")
+data0.drop(['url','birth_date','weight','ncaa_efgpct'],axis=1,inplace=True)
+data0.drop(['height','college'],axis=1,inplace=True)
+data0.dropna(inplace=True)
+data0.reset_index(drop=True)
+data1=data0[data0['nba_ppg']>15.0]
+data1.head()
+inputs = torch.tensor(data1[['ncaa_3ptapg','ncaa_3ptpg','ncaa_fgapg','ncaa_fgpct','ncaa_ft','ncaa_ftapg','ncaa_ppg']].values)
+ppg=torch.tensor(data1['nba_ppg'].values)
+w=torch.randn(1,7,requires_grad=True)
+b=torch.randn(1,requires_grad=True)
+def model(x):
+    return x @ w.t() + b
+pred=model(inputs.float())
+print(pred)
+def mse(t1, t2):
+    dif = t1 - t2
+    return torch.sum(dif * dif) / dif.numel()
+loss=mse(ppg,pred.t())
+print(loss)
+for i in range(500):
+    pred = model(inputs.float())
+    loss = mse(ppg,pred.t())
+    loss.backward()
+    with torch.no_grad():
+        w -= w.grad * 1e-5
+        b -= b.grad * 1e-5
+        w.grad.zero_()
+        b.grad.zero_()
+preds = model(inputs.float())
+loss = mse(ppg,pred.t())
+print(loss)
+print(pred)
+print(ppg)
+
+linReg = linear_model.LinearRegression()
+linReg.fit(xtrain, ytrain)
+
+y_predLin = linReg.predict(xtest)
+print(y_predLin - ytest)
+
+print('Coefficients: \n', linReg.coef_)
+print("Mean squared error: %.3f" % mean_squared_error(ytest, y_predLin))
+print('Variance score: %.3f' % r2_score(ytest, y_predLin))
+
+ridReg = linear_model.Ridge()
+ridReg.fit(xtrain, ytrain)
+
+y_predrid = ridReg.predict(xtest)
+print(y_predrid - ytest)
+
+print('Coefficients: \n', ridReg.coef_)
+print("Mean squared error: %.3f" % mean_squared_error(ytest, y_predrid))
+print('Variance score: %.3f' % r2_score(ytest, y_predrid))
+
+msePlot, ax = plt.subplots()
+
+mseScores = [mean_squared_error(ytest, y_predLin), mean_squared_error(ytest, y_predrid)]
+x_pos = np.arange(len(mseScores))
+
+ax.bar(x_pos, mseScores, edgecolor = 'white', linewidth = 3)
+
+mseNames = ["Linear regression", "Ridge regression"]
+
+labels = [i for i in mseNames]
+
+rects = ax.patches
+for rect, label in zip(rects, labels):
+    height = .5
+    ax.text(rect.get_x() + rect.get_width() / 1.8, height, label,
+            ha='center', va='bottom', rotation = 'vertical', color = 'white', size = 16)
+
+msePlot.suptitle("Mean squared error (MSE) of regressions", weight = 'bold', size = 18, y = 1.005)
+
+ax.xaxis.set_visible(False)
+ax.set_ylabel("MSE (lower is better)")
+
+msePlot.savefig('mse-plot.png', dpi = 400, bbox_inches = 'tight')
+
+data2021=pd.read_csv("../input/data2021/REAL_GM_PLAYER_STATS___1838018641.csv")
+data2021.head()
+data2021.dropna(inplace=True)
+data2021.reset_index(drop=True)
+data2021.head()
+linreg2021=linReg.predict(datatest)
+player_names=data2021.loc[:,'Player']
+for player,prediction in zip(player_names,linreg2021):
+    print(player,prediction)
+ridreg2021=ridReg.predict(datatest)
+for player,prediction in zip(player_names,ridreg2021):
+    print(player,prediction)
+
+
+
+        
